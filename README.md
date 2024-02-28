@@ -271,5 +271,91 @@ public class ConversionServiceTest {
 
 
 
+## 스프링에 Converter 적용하기
 
 
+
+### 예제 - WebConfig 컨버터 등록 및 사용
+
+[`WebConfig`]
+
+* 스프링은 내부에서 `ConversionService`를 제공한다.
+* `WebMvcConfigurer.addFormatters()`를 사용해서 추가하고 싶은 컨버터를 등록하면 된다.
+* 이렇게 하면 스프링은 내부에서 사용하는 `ConversionSerivce`에 컨버터를 추가해준다.
+
+```java
+package hello.typeconverter;
+
+import hello.typeconverter.converter.IntegerToStringConverter;
+import hello.typeconverter.converter.IpPortToStringConverter;
+import hello.typeconverter.converter.StringToIntegerConverter;
+import hello.typeconverter.converter.StringToIpPortConverter;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.format.FormatterRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        registry.addConverter(new StringToIntegerConverter());
+        registry.addConverter(new IntegerToStringConverter());
+        registry.addConverter(new IpPortToStringConverter());
+        registry.addConverter(new StringToIpPortConverter());
+
+    }
+}
+```
+
+
+
+[`Hellocontroller`]
+
+```java
+@GetMapping("/hello-v2")
+public String helloV2(@RequestParam Integer data) {
+    System.out.println("data = " + data);
+    return "ok";
+}
+```
+
+
+
+### 결과
+
+위의 컨트롤러를 실행했을 때 결과는 아래와 같다.
+
+* 스프링은 내부에서 수 많은 기본 컨버터를 제공하게 되는데, <u>컨버터를 추가하면 기존 컨버터 보다 우선순위를 가지게 된다.</u>
+
+```
+StringToIntegerConverter   : convert source=10
+data = 10
+```
+
+
+
+### 예제 - 사용자 정의 타입 컨버터 사용하기
+
+```java
+@GetMapping("ip-port")
+public String ipPort(@RequestParam IpPort ipPort) {
+    System.out.println("ipPort.getIp() = " + ipPort.getIp());
+    System.out.println("ipPort.getPort() = " + ipPort.getPort());
+    return "ok";
+}
+```
+
+
+
+### 결과
+
+<u>`@RequestParam`을 처리하는 `ArgumentResolver`인 `RequestParamMethodArgurmentResolver`에서 `ConversionSerivce`을 사용해서 타입을 변환한다.</u>
+
+결국 내부적으로 `ConversionSerivce`를 사용해서 타입 컨버터를 진행하게 된다.
+
+```
+StringToIpPortConverter : convert source=127.0.0.1:8080
+ipPort IP = 127.0.0.1
+ipPort PORT = 8080
+```
