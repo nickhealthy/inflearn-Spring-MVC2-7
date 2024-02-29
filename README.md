@@ -475,3 +475,128 @@ public class ConverterController {
 </body>
 </html>
 ```
+
+
+
+## 포맷터 - Formatter
+
+<u>객체를 특정한 포맷에 맞추어 문자로 출력하거나, 또는 그 반대의 역할을 하는 것에 특화된 기능이 바로 포맷터(Formatter)이다.</u>
+
+
+
+### Converter vs Formatter
+
+* `Converter`는 범용(객체 -> 객체)
+* `Formatter`는 문자에 특화(객체 -> 문자, 문자 -> 객체) + 현지화(Locale)
+
+
+
+### Formatter 인터페이스
+
+<u>포맷터는 객체를 문자로 변경하고, 문자를 객체로 변경하는 두 가지 기능을 모두 수행한다.</u>
+
+* `String print(T object, Locale locale)`: 객체를 문자로 변경한다.
+* `T parse(String text, Locale locale)`: 문자를 객체로 변경한다.
+
+```java
+public interface Printer<T> {
+   String print(T object, Locale locale);
+}
+
+public interface Parser<T> {
+   T parse(String text, Locale locale) throws ParseException;
+}
+     
+     
+public interface Formatter<T> extends Printer<T>, Parser<T> {}
+```
+
+
+
+### 예제
+
+숫자 1000을 문자 1,000으로 그리고 그 반대도 처리해주는 포맷터 만들기
+
+[`MyNumberFormatter`] - 포맷터 정의
+
+* 1,000처럼 숫자 중간에 쉼표를 적용하려면 자바가 기본으로 제공하는 `NumberFormat` 객체를 사용하면 된다.
+  * `Locale` 정보를 활용해서 나려별로 다른 숫자 포맷을 만들어준다.
+
+```java
+package hello.typeconverter.fomatter;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.Formatter;
+
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.Locale;
+
+@Slf4j
+public class MyNumberFormatter implements Formatter<Number> {
+
+    /**
+     * 문자를 객체로 변경
+     */
+    @Override
+    public Number parse(String text, Locale locale) throws ParseException {
+        log.info("text = {}, locale = {}", text, locale);
+        NumberFormat format = NumberFormat.getInstance(locale);
+        return format.parse(text);
+    }
+
+
+    /**
+     * 객체를 문자로 변경
+     */
+    @Override
+    public String print(Number object, Locale locale) {
+        log.info("objcet = {}, locale = {}", object, locale);
+        return NumberFormat.getInstance(locale).format(object);
+    }
+}
+```
+
+
+
+[`MyNumberFormatterTest`] - 테스트 코드
+
+```java
+package hello.typeconverter.fomatter;
+
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.text.ParseException;
+import java.util.Locale;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+class MyNumberFormatterTest {
+
+    MyNumberFormatter formatter = new MyNumberFormatter();
+
+    @Test
+    void parse() throws ParseException {
+        Number result = formatter.parse("1,000", Locale.KOREA);
+        assertThat(result).isEqualTo(1000L); // parse의 결과가 Long이기 때문에 L을 넣어주어야 함
+    }
+
+    @Test
+    void print() {
+        String result = formatter.print(1000, Locale.KOREA);
+        assertThat(result).isEqualTo("1,000");
+    }
+}
+```
+
+
+
+### 실행 결과
+
+```
+MyNumberFormatter - text=1,000, locale=ko_KR
+MyNumberFormatter - object=1000, locale=ko_KR
+```
+
