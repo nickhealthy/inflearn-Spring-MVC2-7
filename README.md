@@ -60,3 +60,116 @@ package org.springframework.core.convert.converter;
 
 
 
+## 타입 컨버터 - Converter
+
+
+
+### 예제 - 사용자 정의 컨버터
+
+IP, PORT를 입력하면 IpPort 객체로 변환하는 컨버터로 만들기
+
+[`IpPort`]
+
+* 객체 정의
+
+```java
+package hello.typeconverter.type;
+
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+
+@Getter
+@EqualsAndHashCode
+public class IpPort {
+
+    private String ip;
+    private int port;
+
+    public IpPort(String ip, int port) {
+        this.ip = ip;
+        this.port = port;
+    }
+}
+
+```
+
+
+
+[컨버터 정의 - `StringToIpPortConverter`]
+
+```java
+package hello.typeconverter.converter;
+
+import hello.typeconverter.type.IpPort;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.convert.converter.Converter;
+
+@Slf4j
+public class StringToIpPortConverter implements Converter<String, IpPort> {
+
+    @Override
+    public IpPort convert(String source) {
+        log.info("convert source = {}", source);
+        String[] split = source.split(":");
+        String ip = split[0];
+        int port = Integer.valueOf(split[1]);
+
+        return new IpPort(ip, port);
+    }
+}
+```
+
+
+
+[컨버터 정의 - `IpPortToStringConverter`]
+
+```java
+package hello.typeconverter.converter;
+
+import hello.typeconverter.type.IpPort;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.convert.converter.Converter;
+
+@Slf4j
+public class IpPortToStringConverter implements Converter<IpPort, String> {
+
+    @Override
+    public String convert(IpPort source) {
+        log.info("convert source = {}", source);
+        return source.getIp() + ":" + source.getPort();
+    }
+}
+```
+
+
+
+[테스트 코드]
+
+```java
+package hello.typeconverter.converter;
+
+import hello.typeconverter.type.IpPort;
+import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class ConverterTest {
+
+    @Test
+    void stringToIpPort() {
+        StringToIpPortConverter converter = new StringToIpPortConverter();
+        String source = "127.0.0.1:8080";
+        IpPort result = converter.convert(source);
+        assertThat(result).isEqualTo(new IpPort("127.0.0.1", 8080));
+    }
+
+    @Test
+    void ipPortToString() {
+        IpPortToStringConverter converter = new IpPortToStringConverter();
+        IpPort ipPort = new IpPort("127.0.0.1", 8080);
+        String result = converter.convert(ipPort);
+        assertThat(result).isEqualTo("127.0.0.1:8080");
+    }
+}
+```
+
