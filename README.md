@@ -173,3 +173,103 @@ class ConverterTest {
 }
 ```
 
+
+
+## 컨버전 서비스 - ConversionService
+
+위와 같이 타입 컨버터를 하나씩 직접 생성해서 타입 변환하는 것은 기존에 사용하던 방식과 유사해서 별로 유용해보이지 않는다. 그래서 <u>스프링은 개별 컨버터를 모아두고, 그것들을 묶어서 편리하게 사용할 수 있는 기능을 제공하는데</u>, 이것이 바로 컨버전 서비스이다.
+
+
+
+### ConversionService 인터페이스
+
+컨버전 서비스 인터페이스는 <u>단순히 컨버팅이 가능한지, 확인하는 기능과 컨버팅 기능을 제공한다.</u>
+
+```java
+package org.springframework.core.convert;
+import org.springframework.lang.Nullable;
+   public interface ConversionService {
+       boolean canConvert(@Nullable Class<?> sourceType, Class<?> targetType);
+       boolean canConvert(@Nullable TypeDescriptor sourceType, TypeDescriptor
+   targetType);
+       <T> T convert(@Nullable Object source, Class<T> targetType);
+       Object convert(@Nullable Object source, @Nullable TypeDescriptor sourceType,
+   TypeDescriptor targetType);
+}
+```
+
+
+
+### 예제 - DefaultConversionService
+
+`DefaultConversionService`는 ConversionService 인터페이스를 구현하는데, <u>추가로 컨버터를 등록하는 기능도 제공한다.</u>
+
+```java
+package hello.typeconverter.converter;
+
+import hello.typeconverter.type.IpPort;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.convert.support.DefaultConversionService;
+
+import static org.assertj.core.api.Assertions.*;
+
+public class ConversionServiceTest {
+
+    @Test
+    void conversionService() {
+        // 등록
+        DefaultConversionService conversionService = new DefaultConversionService();
+        conversionService.addConverter(new StringToIntegerConverter());
+        conversionService.addConverter(new IntegerToStringConverter());
+        conversionService.addConverter(new IpPortToStringConverter());
+        conversionService.addConverter(new StringToIpPortConverter());
+
+        // 사용
+        assertThat(conversionService.convert("10", Integer.class))
+                .isEqualTo(10);
+
+        assertThat(conversionService.convert(10, String.class))
+                .isEqualTo("10");
+
+        IpPort ipPort = conversionService.convert("127.0.0.1:8080", IpPort.class);
+        assertThat(ipPort).isEqualTo(new IpPort("127.0.0.1", 8080));
+
+        String ipPortString = conversionService.convert(new IpPort("127.0.0.1", 8080), String.class);
+        assertThat(ipPortString).isEqualTo("127.0.0.1:8080");
+
+
+    }
+}
+```
+
+
+
+### 등록과 사용 분리
+
+* 컨버터를 등록할 땐 타입 컨버터를 명확하게 알아야한다.
+* 하지만 컨버터를 사용하는 입장에서는 타입 컨버터를 몰라도 된다.
+* <u>따라서 타입 변환을 원하는 사용자는 컨버전 서비스 인터페이스에만 의존하면 된다.</u>
+
+
+
+> 인터페이스 분리 원칙 - ISP(Interface Segregation Principle)
+>
+> <u>인터페이스 분리 원칙은 클라이언트가 자신이 이용하지 않는 메서드에 의존하지 않아야 한다.</u>
+> 위의 예제에서처럼 `DefaultConversionService`는 다음 인터페이스를 구현했는데
+>
+> * ConversionService: 컨버터 사용에 초점
+> * ConverterRegistry: 컨버터 등록에 초점
+>
+> 이렇게 인터페이스를 분리하면 컨버터를 사용하는 클라이언트와,
+> 컨버터를 등록하고 관리하는 클라이언트의 관심사를 명확하게 분리할 수 있다.
+>
+> <u>결과적으로 컨버터를 사용하는 클라이언트는 꼭 필요한 메서드만 알게된다.</u>
+> `@RequestParam` 같은 곳에서도 `ConversionService`를 사용해서 타입을 변환한다.
+
+
+
+
+
+
+
