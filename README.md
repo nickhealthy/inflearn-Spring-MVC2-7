@@ -359,3 +359,119 @@ StringToIpPortConverter : convert source=127.0.0.1:8080
 ipPort IP = 127.0.0.1
 ipPort PORT = 8080
 ```
+
+
+
+## 뷰 템플릿에 컨버터 적용하기
+
+타임리프는 렌더링 시 컨버터를 적용해서 렌더링 하는 방법을 지원한다.
+이전까지는 문자를 객체로 변환했다면, <u>이번에는 그 반대로 객체를 문자로 변환하는 작업을 확인할 수 있다.</u>
+
+
+
+### 예제
+
+* 타임리프는 `${{...}}`를 사용하면 자동으로 컨버전 서비스를 사용해서 변환된 결과를 출력해준다.
+  * `{{number}}` : 뷰 템플릿은 데이터를 문자로 출력한다.
+  * `{{ipPort}}`: 뷰 템플릿은 데이터를 문자로 출력한다. IpPort 타입을 String 타입으로 변환해야 하므로 `IpPortToStringConverter`가 적용된다.
+* `GET /converter/edit`
+  * `th:field`가 자동으로 컨버전 서비스를 적용해주어서 `${{ipPort}}`처럼 적용이 된다. 따라서 IpPort -> String으로 변환된다.
+* `POST /converter/edit`
+  * `@ModelAttribute`를 사용해서 `String -> IpPort`로 변환된다.
+
+```java
+package hello.typeconverter.controller;
+
+import hello.typeconverter.type.IpPort;
+import lombok.Data;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+
+@Controller
+public class ConverterController {
+
+    @GetMapping("/converter-view")
+    public String converterView(Model model) {
+        model.addAttribute("number", 10000);
+        model.addAttribute("ipPort", new IpPort("127.0.0.1", 8080));
+        return "converter-view";
+    }
+
+    @GetMapping("/converter/edit")
+    public String converterForm(Model model) {
+
+        IpPort ipPort = new IpPort("127.0.0.1", 8080);
+        Form form = new Form(ipPort);
+
+        model.addAttribute("form", form);
+        return "converter-form";
+    }
+
+    @PostMapping("/converter/edit")
+    public String converterEdit(@ModelAttribute Form form, Model model) {
+        IpPort ipPort = form.getIpPort();
+        model.addAttribute("ipPort", ipPort);
+        return "converter-view";
+    }
+
+    @Data
+    static class Form {
+        private IpPort ipPort;
+
+        public Form(IpPort ipPort) {
+            this.ipPort = ipPort;
+        }
+    }
+}
+```
+
+
+
+[`converter-view`]
+
+```java
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<ul>
+    <li>${number}: <span th:text="${number}" ></span></li>
+    <li>${{number}}: <span th:text="${{number}}" ></span></li>
+    <li>${ipPort}: <span th:text="${ipPort}" ></span></li>
+    <li>${{ipPort}}: <span th:text="${{ipPort}}" ></span></li>
+</ul>
+
+</body>
+</html>
+```
+
+
+
+[`converter-form`]
+
+* 타임리프의 `th:field`는 id, name, value 뿐만 아니라 컨버전 서비스도 함께 적용한다.
+
+```java
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<form th:object="${form}" th:method="post">
+    th:field <input type="text" th:field="*{ipPort}"><br/>
+    th:value <input type="text" th:value="*{ipPort}">(보여주기 용도)<br/>
+    <input type="submit"/>
+</form>
+
+</body>
+</html>
+```
