@@ -721,3 +721,129 @@ data = 10000
 
 
 
+## 스프링이 제공하는 기본 포맷터
+
+스프링은 자바에서 기본으로 제공하는 타입들에 대해 수 많은 포맷터를 기본으로 제공하지만, <u>기본 형식이 지정되어 있기 때문에 각 필드마다 다른 형식으로 포맷을 지정하기 어렵다.</u>
+
+<u>스프링은 이런 문제를 해결하기 위해 어노테이션을 기반으로 원하는 형식을 지정해서 사용할 수 있는 매우 유용한 포맷터 두 가지를 기본으로 제공한다.</u>
+
+* `@NumberFormat`: 숫자 관련 형식 지정 포맷터 사용, (`NumberFormatAnnotationFormatterFactory`)
+* `@DateTimeFormat`: 날짜 관련 형식 지정 포맷터 사용
+
+
+
+### 예제 - 스프링이 제공하는 어노테이션 기반 포맷터
+
+[`FormatterController`]
+
+```java
+package hello.typeconverter.controller;
+
+import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.format.annotation.NumberFormat;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+
+import java.time.LocalDateTime;
+
+@Controller
+public class FormatterController {
+
+    @GetMapping("/formatter/edit")
+    public String formatterForm(Model model) {
+
+        Form form = new Form();
+        form.setNumber(10000);
+        form.setLocalDateTime(LocalDateTime.now());
+
+        model.addAttribute("form", form);
+        return "formatter-form";
+    }
+
+    @PostMapping("/formatter/edit")
+    public String formatterEdit(@ModelAttribute Form form) {
+        return "formatter-view";
+    }
+
+    @Data
+    static class Form {
+        @NumberFormat(pattern = "###,###")
+        private Integer number;
+
+        @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        private LocalDateTime localDateTime;
+    }
+
+}
+```
+
+
+
+[`formatter-view`]
+
+```html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<ul>
+    <li>${form.number}: <span th:text="${form.number}" ></span></li>
+    <li>${{form.number}}: <span th:text="${{form.number}}" ></span></li>
+    <li>${form.localDateTime}: <span th:text="${form.localDateTime}" ></span></li>
+    <li>${{form.localDateTime}}: <span th:text="${{form.localDateTime}}" ></span></li>
+</ul>
+
+</body>
+</html>
+```
+
+
+
+[`formatter-form`]
+
+```html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+<form th:object="${form}" th:method="post">
+    number <input type="text" th:field="*{number}"><br/>
+    localDateTime <input type="text" th:field="*{localDateTime}"><br/>
+    <input type="submit"/>
+</form>
+
+</body>
+</html>
+```
+
+
+
+#### 실행 결과
+
+* 지정된 포맷으로 출력된 것을 확인할 수 있다.
+
+```
+${form.number}: 10000
+${{form.number}}: 10,000
+${form.localDateTime}: 2021-01-01T00:00:00
+${{form.localDateTime}}: 2021-01-01 00:00:00
+```
+
+
+
+## 정리
+
+컨버터를 사용하든, 포맷터를 사용하든 등록 방법은 다르지만, 사용할 땐 컨버전 서비스를 통해서 일관성 있게 사용할 수 있다.
+컨버전 서비스는 @RequestParam, @ModelAttribute, @PathVariable, 뷰 템플릿 등에서 사용할 수 있다.
