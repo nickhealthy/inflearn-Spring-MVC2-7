@@ -663,3 +663,61 @@ public class FormattingConversionServiceTest {
 
 
 
+## 포맷터 적용하기
+
+### 예제 - 어플리케이션에 적용하기(컨버터, 포맷터 등록)
+
+* 위에서 만든 숫자 -> 문자, 문자 -> 숫자 포맷터를 적용시키기 위해서는 기존 컨버터를 주석처리를 해야한다.  
+  *  우선순위는 컨버터가 우선하므로 포맷터가 적용되지 않고, 컨버터가 적용된다.
+
+```java
+package hello.typeconverter;
+
+import hello.typeconverter.converter.IpPortToStringConverter;
+import hello.typeconverter.converter.StringToIpPortConverter;
+import hello.typeconverter.fomatter.MyNumberFormatter;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.format.FormatterRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        // 주석처리 우선순위
+        // 컨버터가 포맷터보다 우선순위가 높기 때문에 해당 부분을 주석 처리해주어야 숫자 -> 문자, 문자 -> 숫자 기능의 포맷터가 적용된다.
+//        registry.addConverter(new StringToIntegerConverter());
+//        registry.addConverter(new IntegerToStringConverter());
+        registry.addConverter(new IpPortToStringConverter());
+        registry.addConverter(new StringToIpPortConverter());
+
+
+        // 추가
+        registry.addFormatter(new MyNumberFormatter());
+    }
+}
+```
+
+
+
+#### 실행 결과
+
+* 객체 -> 문자(http://localhost:8080/converter-view)
+  * `MyNumberFormatter`가 적용되어서 10,000 문자가 출력됨
+
+```
+• ${number}: 10000
+• ${{number}}: 10,000
+```
+
+* 문자 -> 객체(http://localhost:8080/hello-v2?data=10,000)
+  * "10,000"이란 포맷팅 된 문자가 `Integer` 타입의 숫자 10000으로 변경됨 
+
+```
+MyNumberFormatter : text=10,000, locale=ko_KR
+data = 10000
+```
+
+
+
